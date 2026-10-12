@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const ejsMate = require('ejs-mate');
 const methodOverride = require('method-override');
 const Campground = require('./models/campground');
+const ExpressError = require('./utils/ExpressError');
 
 mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp')
     .then(() => console.log('Database connected'))
@@ -50,7 +51,7 @@ app.get('/campgrounds/:id/edit', async (req, res) => {
 });
 
 app.put('/campgrounds/:id', async (req, res) => {
-    const{ id } = req.params;
+    const { id } = req.params;
     const campground = await Campground.findByIdAndUpdate(id, {...req.body.campground});
     res.redirect(`/campgrounds/${campground._id}`);
 });
@@ -59,6 +60,16 @@ app.delete('/campgrounds/:id', async (req, res) => {
     const { id } = req.params;
     await Campground.findByIdAndDelete(id);
     res.redirect('/campgrounds');
+});
+
+app.all('/{*path}', (req, res, next) => {
+    next(new ExpressError('Page Not Found', 404));
+});
+
+app.use((err, req, res, next) => {
+    const { statusCode = 500 } = err;
+    if(!err.message) err.message = 'Oh No, Something Went Wrong';
+    res.status(statusCode).render('error', { err });
 });
 
 app.listen(3000, () => {
