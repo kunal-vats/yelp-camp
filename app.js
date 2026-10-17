@@ -6,7 +6,7 @@ const methodOverride = require('method-override');
 const Campground = require('./models/campground');
 const Review = require('./models/review.js');
 const ExpressError = require('./utils/ExpressError');
-const { campgroundSchema } = require('./schemas.js');
+const { campgroundSchema,reviewSchema } = require('./schemas.js');
 
 mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp')
     .then(() => console.log('Database connected'))
@@ -25,6 +25,16 @@ app.use(methodOverride('_method'));
 
 const validateCampground = (req, res, next) => {
     const { error } = campgroundSchema.validate(req.body);
+    if(error) {
+        const msg = error.details.map(el => el.message).join(', ');
+        throw new ExpressError(msg, 400);
+    } else {
+        next();
+    }
+};
+
+const validateReview = (req, res, next) => {
+    const { error } = reviewSchema.validate(req.body);
     if(error) {
         const msg = error.details.map(el => el.message).join(', ');
         throw new ExpressError(msg, 400);
@@ -74,7 +84,7 @@ app.delete('/campgrounds/:id', async (req, res) => {
     res.redirect('/campgrounds');
 });
 
-app.post('/campgrounds/:id/reviews', async (req, res) => {
+app.post('/campgrounds/:id/reviews', validateReview, async (req, res) => {
     const campground = await Campground.findById(req.params.id);
     const review = new Review(req.body.review);
     campground.reviews.push(review);
